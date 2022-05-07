@@ -5,7 +5,8 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-#library('tidyeverse')
+#install.packages('tidyverse')
+library('tidyverse')
 ```
 
 ## GitHub Documents
@@ -14,25 +15,109 @@ This is an R Markdown format used for publishing markdown documents to GitHub. W
 
 ## Including Code
 
-## Load data
-
-```{}
-# read csv
-connections_fixed <- read_csv()
-```
-
 ## Get count of contacts by employer
 using 'dplyr' functions ("verbs") to do the counts
 pipe operator '%>%' that passes the data from one step to the next
 
-```{}
-
-
+```{r}
+Connections %>% count(Company) %>% arrange(-n)
 ```
 
 ## Create networks where edges are based on your contacts being affiliated with the same organization
+# node and edges tables
+## node table
+#id and name
+## edge table
+#from to and weight
 
-```{}
-
+```{r}
+# load libraries
+library(igraph)
 ```
 
+# create first and last name column
+
+```{r}
+# create first name and last name initial column
+first_l = c()
+for (i in 1:nrow(Connections)) {
+  # get first name
+  f_name <- Connections[i,1]
+  # get last name
+  l_name <- Connections[i,2]
+  # get last names first character
+  l_initial <- substr(l_name,1,1)
+  # join into one string
+  f_l_name <- paste(f_name, l_initial, sep=" ")
+  # add to list
+  first_l[i] = f_l_name
+}
+
+# add as a column to dataset
+Connections$Names <- first_l
+```
+
+```{r}
+# get unique names
+people <- Connections %>%
+  distinct(Names)
+
+# view names as columns
+as_cols <- do.call(rbind.data.frame, people)
+as_cols
+
+```
+## create edge table
+# From name -> to name + weight of connection
+
+
+```{r}
+first_person <- c()
+connected_to <- c()
+weights <- c()
+# get data to create edge table 
+for (i in 1:nrow(Connections)) {
+  # get the current name
+  curr_name <- Connections[i,7]
+  # get the company of the person
+  curr_company <- Connections[i,4]
+  # get all the names that also have the same company, without the current name
+  same_company <- Connections[as.character(Connections$Company) == as.character(curr_company) & as.character(Connections$Names) != as.character(curr_name), ]
+  if (nrow(same_company)==0){
+    next # go to next person if no common people with the same company
+  }
+  curr_first_person <- c()
+  curr_connected_to <- c()
+  # assuming weight value 1 to all connections
+  curr_weights <- c()
+  # add the name and connection to vectors created
+  for (j in 1:nrow(same_company)){ 
+    curr_first_person[j] = curr_name
+    curr_connected_to[j] = same_company[j, 7]
+    curr_weights[j] = 1
+  }
+  # append to vector
+  first_person <- append(first_person, curr_first_person)
+  connected_to <- append(connected_to, curr_connected_to)
+  weights <- append(weights, curr_weights)
+
+}
+
+# save data
+edges <- data.frame(first_person,connected_to, weights)
+# drop duplicates if any
+edges <- edges[!duplicated(edges), ]
+edges
+```
+
+# create graph objects
+```{r}
+install.packages('network')
+library('network')
+```
+
+# create network objects
+```{r}
+linkedIn_network <- network(edges, vertex.attr = people, matrix.type = "edgelist", ignore.eval = FALSE)
+
+```
