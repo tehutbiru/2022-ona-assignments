@@ -267,7 +267,7 @@ V(advice_net)$color = nodes$art_unit
 centralities <- cbind(Degree, Closeness, Betweenness)
 centralities = round(centralities,2)
 centralities = data.frame(centralities)
-
+library(ggraph)
 # plot graph 
 ggraph(advice_net, layout="kk") +
        geom_edge_link()+
